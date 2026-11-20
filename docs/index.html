@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>color-space-kit · 颜色转换与对比度</title>
+  <script type="importmap">
+  { "imports": { "color-space-kit": "https://cdn.jsdelivr.net/npm/color-space-kit@1.0.0/dist/index.js" } }
+  </script>
+  <style>
+    :root { --bg:#f7f8fa; --card:#fff; --border:#e5e7eb; --text:#1f2329; --muted:#6b7280; --accent:#3b82f6; --code:#f3f4f6; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); padding:24px; }
+    .wrap { max-width:760px; margin:0 auto; }
+    h1 { font-size:22px; margin:0 0 4px; }
+    .sub { color:var(--muted); font-size:14px; margin-bottom:24px; }
+    .sub code { background:var(--code); padding:2px 6px; border-radius:4px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; }
+    .card h2 { font-size:16px; margin:0 0 12px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    input[type=color] { width:60px; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer; padding:0; }
+    input[type=text] { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; width:130px; }
+    .swatch { width:80px; height:80px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+    .out { font-family:"SF Mono",Menlo,monospace; background:var(--code); padding:10px 12px; border-radius:8px; font-size:13px; line-height:1.8; }
+    .aa-ok { color:#10b981; font-weight:600; }
+    .aa-bad { color:#ef4444; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>color-space-kit</h1>
+    <p class="sub">hex/rgb/hsl/hsv 互转 · WCAG 对比度 · 明暗判断。安装：<code>npm i color-space-kit</code></p>
+
+    <div class="card">
+      <h2>① 颜色转换</h2>
+      <div class="row">
+        <input type="color" id="pick" value="#336699" />
+        <input type="text" id="hex" value="#336699" placeholder="#RRGGBB" />
+      </div>
+      <div class="row">
+        <div class="swatch" id="sw">#336699</div>
+        <div class="out" id="info" style="flex:1"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② WCAG 对比度（正文 ≥ 4.5:1 达标）</h2>
+      <div class="row">
+        <span>前景</span><input type="color" id="fg" value="#333333" />
+        <span>背景</span><input type="color" id="bg" value="#ffffff" />
+      </div>
+      <div class="out" id="contrast"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { hexToRgb, rgbToHsl, rgbToHsv, contrastRatio, isWCAGAA, readableText, mix } from 'color-space-kit'
+
+    const pick = document.getElementById('pick')
+    const hexIn = document.getElementById('hex')
+    const sw = document.getElementById('sw')
+    const info = document.getElementById('info')
+    const fg = document.getElementById('fg'), bg = document.getElementById('bg')
+    const contrast = document.getElementById('contrast')
+
+    function updateColor() {
+      let hex = hexIn.value.trim()
+      try {
+        const rgb = hexToRgb(hex)
+        const hsl = rgbToHsl(rgb)
+        const hsv = rgbToHsv(rgb)
+        const text = readableText(hex)
+        sw.style.background = hex
+        sw.style.color = text
+        sw.textContent = hex
+        info.innerHTML = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})<br>` +
+          `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)<br>` +
+          `hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)<br>` +
+          `推荐文字色：${text}`
+        pick.value = hex.length === 7 ? hex : '#336699'
+      } catch (e) {
+        info.textContent = '无效的颜色'
+      }
+    }
+    hexIn.addEventListener('input', updateColor)
+    pick.addEventListener('input', () => { hexIn.value = pick.value; updateColor() })
+    updateColor()
+
+    function updateContrast() {
+      const ratio = contrastRatio(fg.value, bg.value)
+      const ok = isWCAGAA(fg.value, bg.value)
+      contrast.innerHTML = `对比度 <b>${ratio}:1</b> — ` +
+        (ok ? '<span class="aa-ok">✓ 达到 AA 正文标准</span>' : '<span class="aa-bad">✗ 未达标（需 ≥ 4.5）</span>')
+    }
+    fg.addEventListener('input', updateContrast); bg.addEventListener('input', updateContrast); updateContrast()
+  </script>
+</body>
+</html>
